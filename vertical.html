@@ -158,6 +158,45 @@
             gap: 3mm;
         }
 
+        .qr-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 6px;
+            display: block;
+        }
+
+        .qr-controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .qr-btn-subir, .qr-btn-quitar {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 13px;
+            border-radius: 50px;
+            border: none;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .qr-btn-subir {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: #fff;
+            box-shadow: 0 3px 10px rgba(99,102,241,0.35);
+        }
+
+        .qr-btn-quitar {
+            background: rgba(239,68,68,0.15);
+            color: #f87171;
+        }
+
+        @media print { .qr-controls { display: none !important; } }
+
         .qr-placeholder-icon {
             opacity: 0.18;
         }
@@ -443,7 +482,7 @@
     <!-- QR -->
     <div class="row-qr">
         <p class="qr-label">Escaneá para pagar</p>
-        <div class="qr-box">
+        <div class="qr-box" id="qr-box">
             <!-- ícono QR placeholder -->
             <svg class="qr-placeholder-icon" width="52" height="52" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="2" y="2" width="9" height="9" rx="1.2" stroke="#6366f1" stroke-width="1.6"/>
@@ -459,6 +498,12 @@
                 <rect x="15.2" y="15.2" width="2.5" height="2.5" rx="0.3" fill="#6366f1"/>
             </svg>
             <p class="qr-hint">Pegá tu QR aquí</p>
+        </div>
+        <!-- controles QR — ocultos al imprimir -->
+        <div class="qr-controls">
+            <input type="file" id="qr-input" accept="image/*" style="display:none" onchange="cargarQR(this)">
+            <button class="qr-btn-subir" onclick="document.getElementById('qr-input').click()">📷 Subir QR</button>
+            <button class="qr-btn-quitar" id="qr-btn-quitar" style="display:none" onclick="quitarQR()">✕ Quitar</button>
         </div>
     </div>
 
@@ -517,8 +562,74 @@
 <script>
     const LINE_H = '18mm';
 
+    // ── QR: cargar imagen desde archivo ──
+    function cargarQR(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            const original = new Image();
+            original.onload = () => {
+                // Redimensionar a max 600x600 para no saturar localStorage
+                const MAX = 600;
+                let w = original.width, h = original.height;
+                if (w > MAX || h > MAX) {
+                    if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                    else       { w = Math.round(w * MAX / h); h = MAX; }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(original, 0, 0, w, h);
+                const src = canvas.toDataURL('image/png');
+                mostrarQR(src);
+                try { localStorage.setItem('cajvoz_qr', src); } catch(e) { /* localStorage lleno */ }
+            };
+            original.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function mostrarQR(src) {
+        const box = document.getElementById('qr-box');
+        // Ocultar placeholder
+        box.querySelector('.qr-placeholder-icon').style.display = 'none';
+        box.querySelector('.qr-hint').style.display = 'none';
+        // Eliminar imagen previa si existe
+        const prev = box.querySelector('#qr-img');
+        if (prev) prev.remove();
+        // Mostrar nueva imagen
+        const img = document.createElement('img');
+        img.id = 'qr-img';
+        img.src = src;
+        img.alt = 'QR de pago';
+        box.style.padding = '3px';
+        box.style.border  = '2.5px solid rgba(99,102,241,0.35)';
+        box.appendChild(img);
+        // Mostrar botón quitar
+        document.getElementById('qr-btn-quitar').style.display = 'inline-flex';
+    }
+
+    function quitarQR() {
+        const box = document.getElementById('qr-box');
+        const img = box.querySelector('#qr-img');
+        if (img) img.remove();
+        // Restaurar placeholder
+        box.querySelector('.qr-placeholder-icon').style.display = '';
+        box.querySelector('.qr-hint').style.display = '';
+        box.style.padding = '';
+        box.style.border  = '';
+        // Ocultar botón quitar y limpiar input
+        document.getElementById('qr-btn-quitar').style.display = 'none';
+        document.getElementById('qr-input').value = '';
+        localStorage.removeItem('cajvoz_qr');
+    }
+
     // ── Guardar / restaurar con localStorage ──
     window.addEventListener('DOMContentLoaded', () => {
+        // Restaurar QR
+        const qrSrc = localStorage.getItem('cajvoz_qr');
+        if (qrSrc) mostrarQR(qrSrc);
+
         [1, 2].forEach(n => {
             const box    = document.querySelector(`.field:nth-child(${n}) .field-box`);
             const slider = document.getElementById('slider-' + n);
@@ -564,14 +675,15 @@
         localStorage.setItem('cajvoz_size_' + n, input.value);
     }
 
-    // ── Limpiar campos ──
+    // ── Limpiar campos y QR ──
     function limpiarCampos() {
-        if (!confirm('¿Borrar el texto de ambos campos?')) return;
+        if (!confirm('¿Borrar el texto de ambos campos y el QR?')) return;
         [1, 2].forEach(n => {
             const box = document.querySelector(`.field:nth-child(${n}) .field-box`);
             box.textContent = '';
             localStorage.removeItem('cajvoz_campo_' + n);
         });
+        if (document.getElementById('qr-img')) quitarQR();
     }
 
     // ── Imprimir ──
