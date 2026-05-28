@@ -7,6 +7,8 @@
     <style>
         @page { size: A5 landscape; margin: 0; }
 
+        :root { --campo-size: 28pt; }
+
         *, *::before, *::after {
             box-sizing: border-box;
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -171,6 +173,25 @@
             height: 22mm;
             border-radius: 8px;
             background: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 5mm;
+            font-size: var(--campo-size);
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.3px;
+            overflow: hidden;
+            white-space: nowrap;
+            cursor: text;
+            outline: none;
+        }
+        .field-box:focus { outline: 3px solid rgba(99,102,241,0.45); outline-offset: 2px; }
+        .field-box:empty::before {
+            content: attr(data-placeholder);
+            color: #94a3b8;
+            font-size: 10pt;
+            font-weight: 400;
+            letter-spacing: 0;
         }
         .field:nth-child(1) .field-box { border-left: 5px solid #6366f1; }
         .field:nth-child(2) .field-box { border-left: 5px solid #00c853; }
@@ -287,6 +308,7 @@
             top: 16px;
             right: 16px;
             display: flex;
+            align-items: center;
             gap: 8px;
             z-index: 100;
         }
@@ -313,13 +335,41 @@
             background: rgba(255,255,255,0.12);
             box-shadow: none;
         }
+
+        .size-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 14px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+        .size-control input[type="range"] {
+            width: 75px;
+            cursor: pointer;
+            accent-color: #6366f1;
+        }
+        .size-control .size-val {
+            min-width: 30px;
+            text-align: center;
+            color: #a5b4fc;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
 
 <div class="nav-btns">
+    <label class="size-control">
+        Texto: <input type="range" min="10" max="60" value="28" step="1" oninput="cambiarTamano(this.value)">
+        <span class="size-val" id="size-label">28pt</span>
+    </label>
     <a href="vertical.html">↕️ Ver Vertical</a>
-    <button onclick="window.print()">🖨️ Imprimir A5</button>
+    <button onclick="imprimirA5()">🖨️ Imprimir A5</button>
+    <button onclick="imprimirA4()">🖨️ Imprimir A4</button>
 </div>
 
 <div class="cartel">
@@ -348,11 +398,11 @@
                     de Mercado Pago
                 </span>
             </div>
-            <div class="field-box"></div>
+            <div class="field-box" contenteditable="true" spellcheck="false" data-placeholder="Escribí el alias aquí…"></div>
         </div>
         <div class="field">
             <span class="field-label">Titular de la Cuenta</span>
-            <div class="field-box"></div>
+            <div class="field-box" contenteditable="true" spellcheck="false" data-placeholder="Escribí el titular aquí…"></div>
         </div>
     </div>
 
@@ -382,5 +432,35 @@
     </div>
 </div>
 
+<script>
+    function cambiarTamano(val) {
+        document.documentElement.style.setProperty('--campo-size', val + 'pt');
+        document.getElementById('size-label').textContent = val + 'pt';
+    }
+
+    function imprimirA5() {
+        const ov = document.getElementById('print-override');
+        if (ov) ov.remove();
+        window.print();
+    }
+
+    function imprimirA4() {
+        let s = document.getElementById('print-override');
+        if (!s) { s = document.createElement('style'); s.id = 'print-override'; document.head.appendChild(s); }
+        s.textContent = '@media print { @page { size: A4 landscape; margin: 0; } .cartel { width: 297mm; height: 210mm; } }';
+        window.print();
+        s.remove();
+    }
+
+    // Bloquear Enter y limpiar pegado en campos editables
+    document.querySelectorAll('.field-box[contenteditable]').forEach(el => {
+        el.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+        el.addEventListener('paste', e => {
+            e.preventDefault();
+            const txt = (e.clipboardData || window.clipboardData).getData('text/plain');
+            document.execCommand('insertText', false, txt.replace(/\n/g, ' '));
+        });
+    });
+</script>
 </body>
 </html>
