@@ -355,6 +355,12 @@
             box-shadow: none;
         }
 
+        .btn-limpiar {
+            background: rgba(239,68,68,0.15) !important;
+            color: #f87171 !important;
+            box-shadow: none !important;
+        }
+
         .size-control {
             display: inline-flex;
             align-items: center;
@@ -382,6 +388,7 @@
 <body>
 
 <div class="nav-btns">
+    <button class="btn-limpiar" onclick="limpiarCampos()">🗑️ Limpiar</button>
     <a href="vertical.html">↕️ Ver Vertical</a>
     <button onclick="imprimirA5()">🖨️ Imprimir A5</button>
     <button onclick="imprimirA4()">🖨️ Imprimir A4</button>
@@ -413,7 +420,7 @@
                     de Mercado Pago
                 </span>
                 <label class="campo-size-ctrl">
-                    <input type="range" min="10" max="60" value="28" step="1" oninput="cambiarTamano(this, 1)">
+                    <input id="slider-1" type="range" min="10" max="60" value="28" step="1" oninput="cambiarTamano(this, 1)">
                     <span class="size-val" id="size-1">28pt</span>
                 </label>
             </div>
@@ -423,7 +430,7 @@
             <div class="field-label-row">
                 <span class="field-label">Titular de la Cuenta</span>
                 <label class="campo-size-ctrl">
-                    <input type="range" min="10" max="60" value="28" step="1" oninput="cambiarTamano(this, 2)">
+                    <input id="slider-2" type="range" min="10" max="60" value="28" step="1" oninput="cambiarTamano(this, 2)">
                     <span class="size-val" id="size-2">28pt</span>
                 </label>
             </div>
@@ -458,13 +465,57 @@
 </div>
 
 <script>
-    function cambiarTamano(input, fieldNum) {
-        const box = document.querySelector(`.field:nth-child(${fieldNum}) .field-box`);
-        box.style.fontSize = input.value + 'pt';
-        box.style.lineHeight = '22mm';
-        document.getElementById('size-' + fieldNum).textContent = input.value + 'pt';
+    const LINE_H = '22mm';
+
+    // ── Guardar / restaurar con localStorage ──
+    window.addEventListener('DOMContentLoaded', () => {
+        [1, 2].forEach(n => {
+            const box    = document.querySelector(`.field:nth-child(${n}) .field-box`);
+            const slider = document.getElementById('slider-' + n);
+            const label  = document.getElementById('size-' + n);
+            const texto  = localStorage.getItem('cajvoz_campo_' + n);
+            const size   = localStorage.getItem('cajvoz_size_'  + n) || '28';
+
+            if (texto) box.textContent = texto;
+            box.style.fontSize   = size + 'pt';
+            box.style.lineHeight = LINE_H;
+            if (slider) slider.value = size;
+            if (label)  label.textContent = size + 'pt';
+        });
+    });
+
+    // ── Auto-guardar al escribir ──
+    document.querySelectorAll('.field-box[contenteditable]').forEach((el, i) => {
+        const n = i + 1;
+        el.addEventListener('input', () => localStorage.setItem('cajvoz_campo_' + n, el.textContent));
+        el.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+        el.addEventListener('paste', e => {
+            e.preventDefault();
+            const txt = (e.clipboardData || window.clipboardData).getData('text/plain');
+            document.execCommand('insertText', false, txt.replace(/\n/g, ' '));
+        });
+    });
+
+    // ── Cambiar tamaño (guarda en localStorage) ──
+    function cambiarTamano(input, n) {
+        const box = document.querySelector(`.field:nth-child(${n}) .field-box`);
+        box.style.fontSize   = input.value + 'pt';
+        box.style.lineHeight = LINE_H;
+        document.getElementById('size-' + n).textContent = input.value + 'pt';
+        localStorage.setItem('cajvoz_size_' + n, input.value);
     }
 
+    // ── Limpiar campos ──
+    function limpiarCampos() {
+        if (!confirm('¿Borrar el texto de ambos campos?')) return;
+        [1, 2].forEach(n => {
+            const box = document.querySelector(`.field:nth-child(${n}) .field-box`);
+            box.textContent = '';
+            localStorage.removeItem('cajvoz_campo_' + n);
+        });
+    }
+
+    // ── Imprimir ──
     function imprimirA5() {
         const ov = document.getElementById('print-override');
         if (ov) ov.remove();
@@ -478,16 +529,6 @@
         window.print();
         s.remove();
     }
-
-    // Bloquear Enter y limpiar pegado en campos editables
-    document.querySelectorAll('.field-box[contenteditable]').forEach(el => {
-        el.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
-        el.addEventListener('paste', e => {
-            e.preventDefault();
-            const txt = (e.clipboardData || window.clipboardData).getData('text/plain');
-            document.execCommand('insertText', false, txt.replace(/\n/g, ' '));
-        });
-    });
 </script>
 </body>
 </html>
