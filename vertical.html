@@ -534,17 +534,26 @@
         });
     });
 
-    // ── Auto-guardar al escribir ──
+    // ── Auto-guardar al escribir, al salir del campo y al salir de la página ──
+    function guardarCampos() {
+        document.querySelectorAll('.field-box[contenteditable]').forEach((el, i) => {
+            localStorage.setItem('cajvoz_campo_' + (i + 1), el.textContent);
+        });
+    }
+
     document.querySelectorAll('.field-box[contenteditable]').forEach((el, i) => {
         const n = i + 1;
-        el.addEventListener('input', () => localStorage.setItem('cajvoz_campo_' + n, el.textContent));
-        el.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+        el.addEventListener('input',    () => localStorage.setItem('cajvoz_campo_' + n, el.textContent));
+        el.addEventListener('blur',     () => localStorage.setItem('cajvoz_campo_' + n, el.textContent));
+        el.addEventListener('keydown',  e  => { if (e.key === 'Enter') e.preventDefault(); });
         el.addEventListener('paste', e => {
             e.preventDefault();
             const txt = (e.clipboardData || window.clipboardData).getData('text/plain');
             document.execCommand('insertText', false, txt.replace(/\n/g, ' '));
         });
     });
+
+    window.addEventListener('beforeunload', guardarCampos);
 
     // ── Cambiar tamaño (guarda en localStorage) ──
     function cambiarTamano(input, n) {
