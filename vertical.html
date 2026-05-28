@@ -7,8 +7,6 @@
     <style>
         @page { size: A5 portrait; margin: 0; }
 
-        :root { --campo-size: 28pt; }
-
         *, *::before, *::after {
             box-sizing: border-box;
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -204,10 +202,9 @@
             height: 18mm;
             border-radius: 8px;
             background: #ffffff;
-            display: flex;
-            align-items: center;
-            padding: 0 5mm;
-            font-size: var(--campo-size);
+            text-align: center;
+            line-height: 18mm;
+            font-size: 28pt;
             font-weight: 800;
             color: #1e293b;
             letter-spacing: -0.3px;
@@ -226,6 +223,28 @@
         }
         .field:nth-child(1) .field-box { border-left: 5px solid #6366f1; }
         .field:nth-child(2) .field-box { border-left: 5px solid #00c853; }
+
+        /* ── Control de tamaño por campo ── */
+        .campo-size-ctrl {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            margin-left: auto;
+            cursor: pointer;
+        }
+        .campo-size-ctrl input[type="range"] {
+            width: 55px;
+            accent-color: #6366f1;
+            cursor: pointer;
+        }
+        .campo-size-ctrl .size-val {
+            font-size: 6.5pt;
+            font-weight: 700;
+            color: #6366f1;
+            min-width: 26px;
+            text-align: right;
+        }
+        @media print { .campo-size-ctrl { display: none !important; } }
 
         .field-label-row {
             display: flex;
@@ -390,10 +409,6 @@
 <body>
 
 <div class="nav-btns">
-    <label class="size-control">
-        Texto: <input type="range" min="10" max="60" value="28" step="1" oninput="cambiarTamano(this.value)">
-        <span class="size-val" id="size-label">28pt</span>
-    </label>
     <a href="index.html">↔️ Ver Horizontal</a>
     <button onclick="imprimirA5()">🖨️ Imprimir A5</button>
     <button onclick="imprimirA4()">🖨️ Imprimir A4</button>
@@ -449,11 +464,21 @@
                     <img src="https://cdn.simpleicons.org/mercadopago/009ee3" width="9" height="9" alt="MP" style="display:block;flex-shrink:0;">
                     de Mercado Pago
                 </span>
+                <label class="campo-size-ctrl">
+                    <input type="range" min="10" max="60" value="28" step="1" oninput="cambiarTamano(this, 1)">
+                    <span class="size-val" id="size-1">28pt</span>
+                </label>
             </div>
             <div class="field-box" contenteditable="true" spellcheck="false" data-placeholder="Escribí el alias aquí…"></div>
         </div>
         <div class="field">
-            <span class="field-label">Titular de la Cuenta</span>
+            <div class="field-label-row">
+                <span class="field-label">Titular de la Cuenta</span>
+                <label class="campo-size-ctrl">
+                    <input type="range" min="10" max="60" value="28" step="1" oninput="cambiarTamano(this, 2)">
+                    <span class="size-val" id="size-2">28pt</span>
+                </label>
+            </div>
             <div class="field-box" contenteditable="true" spellcheck="false" data-placeholder="Escribí el titular aquí…"></div>
         </div>
     </div>
@@ -483,9 +508,11 @@
 </div>
 
 <script>
-    function cambiarTamano(val) {
-        document.documentElement.style.setProperty('--campo-size', val + 'pt');
-        document.getElementById('size-label').textContent = val + 'pt';
+    function cambiarTamano(input, fieldNum) {
+        const box = document.querySelector(`.field:nth-child(${fieldNum}) .field-box`);
+        box.style.fontSize = input.value + 'pt';
+        box.style.lineHeight = '18mm';
+        document.getElementById('size-' + fieldNum).textContent = input.value + 'pt';
     }
 
     function imprimirA5() {
